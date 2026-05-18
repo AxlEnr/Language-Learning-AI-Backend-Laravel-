@@ -15,9 +15,9 @@ class UserFactory extends Factory
             'name' => $this->faker->name(),
             'email' => $this->faker->unique()->safeEmail(),
             'password' => Hash::make('password'),
-            'native_language_id' => Language::factory(),
-            'target_language_id' => Language::factory(),
-            'level_id' => Level::factory(),
+            'native_language_id' => fn () => Language::query()->inRandomOrder()->value('id') ?? Language::factory()->create()->id,
+            'target_language_id' => fn () => Language::query()->inRandomOrder()->value('id') ?? Language::factory()->create()->id,
+            'level_id' => fn () => Level::query()->inRandomOrder()->value('id') ?? Level::factory()->create()->id,
         ];
     }
 

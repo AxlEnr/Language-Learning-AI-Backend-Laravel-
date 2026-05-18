@@ -6,9 +6,11 @@ use App\Models\UserStats;
 
 trait HasUserStats
 {
-    public function initializeHasUserStats(): void
+    public static function bootHasUserStats(): void
     {
-        $this->ensureStatsExist();
+        static::created(function ($model) {
+            $model->ensureStatsExist();
+        });
     }
 
     public function ensureStatsExist(): UserStats

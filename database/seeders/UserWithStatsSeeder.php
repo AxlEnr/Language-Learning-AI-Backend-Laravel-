@@ -20,12 +20,14 @@ class UserWithStatsSeeder extends Seeder
                 'email' => 'demo@example.com',
             ]);
 
-        UserStats::create([
-            'user_id' => $user->id,
-            'xp' => 150,
-            'streak_days' => 5,
-            'last_activity_date' => now(),
-        ]);
+        UserStats::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'xp' => 150,
+                'streak_days' => 5,
+                'last_activity_date' => now(),
+            ]
+        );
 
         foreach (SkillType::cases() as $skill) {
             UserSkill::create([
