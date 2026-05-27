@@ -12,6 +12,9 @@ class UserWithStatsSeeder extends Seeder
 {
     public function run(): void
     {
+        if(app()->environment('production')) {
+            return;
+        }
         $user = User::factory()
             ->withSpanishNative()
             ->learningEnglish()

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\UserSkill;
 use App\Models\UserStats;
 use App\Services\Adaptive\AdaptiveService;
+use DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
@@ -21,25 +22,35 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request): JsonResponse
     {
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => $request->password,
-            'native_language_id' => $request->native_language_id,
-            'target_language_id' => $request->target_language_id,
-            'level_id' => $request->level_id,
-        ]);
+        DB::beginTransaction();
+        try {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => $request->password,
+                'native_language_id' => $request->native_language_id,
+                'target_language_id' => $request->target_language_id,
+                'level_id' => $request->level_id,
+            ]);
 
-        $this->initializeUserSkills($user);
-        $this->initializeUserStats($user);
+            $this->initializeUserSkills($user);
+            $this->initializeUserStats($user);
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+            DB::commit();
+            $token = $user->createToken('auth-token')->plainTextToken;
 
-        return response()->json([
-            'message' => 'User registered successfully',
-            'user' => $user->load(['nativeLanguage', 'targetLanguage', 'level']),
-            'token' => $token,
-        ], 201);
+            return response()->json([
+                'message' => 'User registered successfully',
+                'user' => $user->load(['nativeLanguage', 'targetLanguage', 'level']),
+                'token' => $token,
+            ], 201);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return response()->json([
+                'message' => $th->getMessage(),
+            ]);
+        }
+
     }
 
     public function login(LoginRequest $request): JsonResponse
@@ -96,8 +107,9 @@ class AuthController extends Controller
 
     protected function initializeUserStats(User $user): void
     {
-        UserStats::create([
-            'user_id' => $user->id,
+        UserStats::firstOrCreate(
+        ['user_id' => $user->id],
+        [
             'xp' => 0,
             'streak_days' => 0,
             'last_activity_date' => now(),

@@ -161,13 +161,18 @@ class AIService implements AIServiceInterface
 
     protected function buildAdaptiveExercisePrompt(array $context): string
     {
+        $language = $context['language'] ?? 'English';
+        $level = $context['level'] ?? 'A1';
+        $skill = $context['skill'] ?? 'vocabulary';
+        $type = $context['type'] ?? 'multiple_choice';
+        $topic = $context['topic'] ?? 'daily life';
         return "Generate a language learning exercise with these parameters:
         
-        Language: {$context['language'] ?? 'English'}
-        Level: {$context['level'] ?? 'A1'}
-        Skill: {$context['skill'] ?? 'vocabulary'}
-        Type: {$context['type'] ?? 'multiple_choice'}
-        Topic: {$context['topic'] ?? 'daily life'}
+        Language: {$language}
+        Level: {$level}
+        Skill: {$skill}
+        Type: {$type}
+        Topic: {$topic}
         
         Return ONLY valid JSON with this structure:
         {

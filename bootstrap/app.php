@@ -16,12 +16,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             HandleCors::class,
         ]);
-
-        $middleware->statefulApi();
-
-        $middleware->alias([
-            'auth.sanctum' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
