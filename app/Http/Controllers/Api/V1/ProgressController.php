@@ -117,7 +117,7 @@ class ProgressController extends Controller
                     'module' => $p->lesson->module->title,
                 ],
                 'completed_at' => $p->completed_at,
-            ]),
+            ])->values()->toArray(),
         ]);
     }
 

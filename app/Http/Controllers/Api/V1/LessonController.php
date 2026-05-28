@@ -8,7 +8,7 @@ use Illuminate\Http\JsonResponse;
 
 class LessonController extends Controller
 {
-    public function show(int $id): JsonResponse
+    public function show(string $id): JsonResponse
     {
         $lesson = Lesson::with(['module.language', 'module.level', 'exercises'])->findOrFail($id);
 
