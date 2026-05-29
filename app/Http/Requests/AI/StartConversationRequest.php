@@ -17,6 +17,7 @@ class StartConversationRequest extends FormRequest
             'topic' => ['nullable', 'string', 'max:255'],
             'difficulty' => ['nullable', 'integer', 'min:1', 'max:5'],
             'context' => ['nullable', 'array'],
+            'voice_mode' => ['sometimes', 'boolean'],
         ];
     }
 }

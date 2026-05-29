@@ -12,13 +12,13 @@ class AIService implements AIServiceInterface
 {
     protected string $apiKey;
     protected string $model;
-    // protected string $baseUrl = 'https://openrouter.ai/api/v1';
-    protected string $baseUrl = 'https://api.openai.com/v1';
+    protected string $baseUrl;
 
     public function __construct()
     {
         $this->apiKey = config('services.openai.api_key') ?? env('OPENAI_API_KEY');
         $this->model = config('services.openai.model') ?? 'gpt-4o-mini';
+        $this->baseUrl = config('services.openai.base_url') ?? 'https://api.openai.com/v1';
     }
 
     public function sendMessage(AIConversation $conversation, string $message): array
@@ -135,8 +135,9 @@ class AIService implements AIServiceInterface
         $language = $context['language'] ?? 'English';
         $difficulty = $context['difficulty'] ?? 1;
         $topic = $context['topic'] ?? 'general conversation';
+        $voiceMode = !empty($context['voice_mode']) && $context['voice_mode'];
 
-        return "You are a helpful language learning assistant teaching {$language}. 
+        $base = "You are a helpful language learning assistant teaching {$language}. 
                 The student's level is {$difficulty} out of 5 (1=beginner, 5=advanced).
                 Current topic: {$topic}.
                 
@@ -146,6 +147,21 @@ class AIService implements AIServiceInterface
                 - Keep responses appropriate for the difficulty level
                 - Encourage the student
                 - If the topic is specified, stay focused on it";
+
+        if ($voiceMode) {
+            $base .= "
+
+                VOICE LESSON MODE RULES:
+                - Keep responses SHORT and conversational (2-3 sentences max) since they will be spoken aloud
+                - Use natural, spoken language rather than formal written language
+                - When correcting pronunciation mistakes, provide clear phonetic guidance
+                - Ask follow-up questions to encourage the student to keep speaking
+                - Occasionally provide pronunciation tips (e.g., 'Remember, the TH sound is made by placing your tongue between your teeth')
+                - Use simple vocabulary appropriate for the difficulty level since the student is listening, not reading
+                - If the student makes a grammatical error in their speech, gently repeat the correct version naturally in your response";
+        }
+
+        return $base;
     }
 
     protected function buildFeedbackPrompt(string $userAnswer, array $exerciseMetadata): string

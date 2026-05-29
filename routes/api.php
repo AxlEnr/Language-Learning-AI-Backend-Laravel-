@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\ModuleController;
 use App\Http\Controllers\Api\V1\ProgressController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VocabularyController;
+use App\Http\Controllers\Api\V1\VoiceController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('/v1')->group(function (): void {
@@ -51,6 +52,14 @@ Route::prefix('/v1')->group(function (): void {
             Route::post('/conversations/{conversationId}/messages', [AIController::class, 'sendMessage']);
             Route::post('/exercises/generate', [AIController::class, 'generateExercise']);
             Route::get('/recommendations/lesson', [AIController::class, 'recommendLesson']);
+        });
+
+        Route::prefix('voice')->group(function (): void {
+            Route::post('/speech-to-text', [VoiceController::class, 'speechToText']);
+            Route::post('/text-to-speech', [VoiceController::class, 'textToSpeech']);
+            Route::post('/pronunciation', [VoiceController::class, 'evaluatePronunciation']);
+            Route::post('/conversations/{conversationId}', [VoiceController::class, 'voiceConversation']);
+            Route::get('/audio/{path}', [VoiceController::class, 'serveAudio'])->where('path', '.*');
         });
 
         Route::prefix('vocabulary')->group(function (): void {

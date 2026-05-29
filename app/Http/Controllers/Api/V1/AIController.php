@@ -25,6 +25,7 @@ class AIController extends Controller
             'topic' => 'general conversation',
             'difficulty' => 1,
             'language' => $request->user()->targetLanguage?->name ?? 'English',
+            'voice_mode' => false,
         ], $request->context ?? []);
 
         if ($request->filled('topic')) {

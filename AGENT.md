@@ -108,6 +108,16 @@ Key decisions:
 | Word               | words                  | language_id, word, meaning, example_sentence                     |
 | UserWord           | user_words             | user_id, word_id, familiarity (0-5), next_review_at               |
 
+### Voice (OpenAI Whisper + TTS)
+
+| Method | Path                                    | Description                    |
+|--------|-----------------------------------------|--------------------------------|
+| POST   | /voice/speech-to-text                  | Transcribe audio to text (Whisper) |
+| POST   | /voice/text-to-speech                  | Convert text to audio (TTS) |
+| POST   | /voice/pronunciation                   | Evaluate pronunciation accuracy |
+| POST   | /voice/conversations/{id}              | Voice conversation: STT → AI → TTS |
+| GET    | /voice/audio/{path}                    | Serve generated audio files |
+
 ### AI Chat
 
 | Model              | Table                  | Key Fields                                                       |
@@ -170,12 +180,24 @@ Base URL: `/api/v1`
 ## Services
 
 ### AIService (`app/Services/AI/AIService.php`)
-- Connects to OpenRouter API (OpenAI-compatible)
+- Connects to OpenAI-compatible API
 - `sendMessage()` - Sends chat message to AI, stores messages in DB
 - `generateExerciseFeedback()` - Gets AI feedback on exercise answers
 - `generateAdaptiveExercise()` - Creates personalized AI exercises
 - `evaluateTranslation()` - Evaluates translation answers (exact match)
-- Uses `OPENAI_API_KEY` and `OPENAI_MODEL` from config
+- `startConversationContext()` - Creates conversation with context (supports `voice_mode`)
+- `buildSystemPrompt()` - Generates system prompt with optional voice lesson mode
+- Uses `OPENAI_API_KEY`, `OPENAI_MODEL`, and `OPENAI_BASE_URL` from config
+
+### VoiceService (`app/Services/AI/VoiceService.php`)
+- Connects to OpenAI Whisper (STT) and TTS APIs
+- `speechToText()` - Transcribes audio file to text using Whisper-1
+- `textToSpeech()` - Generates audio from text using tts-1/tts-1-hd
+- `evaluatePronunciation()` - Compares recognized speech against expected text, returns similarity score
+- `calculateSimilarity()` - Combines character-level and word-level similarity
+- `generatePronunciationFeedback()` - Provides actionable feedback based on score
+- Voices: alloy, echo, fable, onyx, nova, shimmer
+- Audio formats: mp3, opus, aac, flac, pcm
 
 ### ProgressionService (`app/Services/Progression/ProgressionService.php`)
 - `startLesson()` - Creates progress record (in_progress)
