@@ -11,6 +11,8 @@ class AIConversation extends Model
 {
     use HasFactory;
 
+    protected $table = 'ai_conversations';
+
     protected $fillable = [
         'user_id',
         'context',
@@ -30,6 +32,6 @@ class AIConversation extends Model
 
     public function messages(): HasMany
     {
-        return $this->hasMany(AIMessage::class)->orderBy('created_at');
+        return $this->hasMany(AIMessage::class, 'conversation_id')->orderBy('created_at');
     }
 }

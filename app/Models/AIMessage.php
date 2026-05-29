@@ -11,6 +11,8 @@ class AIMessage extends Model
 {
     use HasFactory;
 
+    protected $table = 'ai_messages';
+
     protected $fillable = [
         'conversation_id',
         'role',

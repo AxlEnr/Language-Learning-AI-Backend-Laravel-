@@ -12,7 +12,8 @@ class AIService implements AIServiceInterface
 {
     protected string $apiKey;
     protected string $model;
-    protected string $baseUrl = 'https://openrouter.ai/api/v1';
+    // protected string $baseUrl = 'https://openrouter.ai/api/v1';
+    protected string $baseUrl = 'https://api.openai.com/v1';
 
     public function __construct()
     {
