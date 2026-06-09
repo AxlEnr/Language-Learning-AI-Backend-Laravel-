@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\SkillType;
+use App\Enums\UserRole;
 use App\Traits\HasUserStats;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
         'native_language_id',
         'target_language_id',
         'level_id',
@@ -34,7 +36,13 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'role' => UserRole::class,
         ];
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === UserRole::ADMIN;
     }
 
     public function nativeLanguage(): BelongsTo

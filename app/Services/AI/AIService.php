@@ -115,6 +115,24 @@ class AIService implements AIServiceInterface
         ]);
     }
 
+    public function generateContent(array $params): array
+    {
+        $prompt = $this->buildContentGenerationPrompt($params);
+
+        $response = $this->callOpenAI([
+            ['role' => 'system', 'content' => 'Generate language learning content. Output ONLY valid JSON. No explanations.'],
+            ['role' => 'user', 'content' => $prompt],
+        ], 4000);
+
+        $content = $response['choices'][0]['message']['content'] ?? '';
+
+        return [
+            'content'     => $this->parseJsonResponse($content),
+            'raw_content' => $content,
+            'tokens_used' => $response['usage']['total_tokens'] ?? 0,
+        ];
+    }
+
     protected function buildMessageHistory(AIConversation $conversation): array
     {
         return $conversation->messages()
@@ -202,16 +220,84 @@ class AIService implements AIServiceInterface
         }";
     }
 
-    protected function callOpenAI(array $messages): array
+    protected function buildContentGenerationPrompt(array $params): string
+    {
+        $type     = $params['type'];
+        $language = $params['language_name'] ?? 'English';
+        $level    = $params['level_code'] ?? 'A1';
+        $quantity = $params['quantity'] ?? 1;
+
+        return match ($type) {
+            'lesson'   => $this->buildLessonPrompt($params, $language, $level, $quantity),
+            'exercise' => $this->buildExercisePrompt($params, $language, $level, $quantity),
+            'words'    => $this->buildWordsPrompt($params, $language, $level, $quantity),
+            default    => '{}',
+        };
+    }
+
+    protected function buildLessonPrompt(array $p, string $lang, string $lvl, int $qty): string
+    {
+        $lessonType = $p['lesson_type'] ?? 'vocabulary';
+        $moduleTitle = $p['module_title'] ?? '';
+        $existing = $p['existing_lessons'] ?? '';
+
+        return "Gen {$qty} {$lessonType} lessons for {$lang} (CEFR {$lvl}). Module: \"{$moduleTitle}\".
+Existing: {$existing}
+
+Return ONLY JSON array:
+[{\"title\":\"...\",\"exercises\":[{\"type\":\"mc|fb|tr|sp|ac\",\"prompt\":\"...\",\"metadata\":{...}}]}]
+
+Exercise metadata by type:
+mc: {\"options\":[\"a\",\"b\",\"c\",\"d\"],\"correct_option\":0,\"hints\":[\"...\"]}
+fb: {\"correct_answer\":\"...\",\"hints\":[\"...\"]}
+tr: {\"source_text\":\"...\",\"accepted_answers\":[\"...\"]}
+sp: {\"expected_phrase\":\"...\",\"pronunciation_tips\":\"...\"}
+ac: {\"scenario\":\"...\"}";
+    }
+
+    protected function buildExercisePrompt(array $p, string $lang, string $lvl, int $qty): string
+    {
+        $exType    = $p['exercise_type'] ?? 'multiple_choice';
+        $lessonTitle = $p['lesson_title'] ?? '';
+        $lessonType  = $p['lesson_type_context'] ?? '';
+        $existing = $p['existing_exercises'] ?? '';
+
+        return "Gen {$qty} {$exType} exercises for {$lang} (CEFR {$lvl}).
+Lesson: \"{$lessonTitle}\" ({$lessonType}).
+Existing exercises: {$existing}
+
+Return ONLY JSON array:
+[{\"type\":\"{$exType}\",\"prompt\":\"...\",\"metadata\":{...}}]
+
+Metadata by type:
+mc: {\"options\":[\"a\",\"b\",\"c\",\"d\"],\"correct_option\":0,\"hints\":[\"...\"]}
+fb: {\"correct_answer\":\"...\",\"hints\":[\"...\"]}
+tr: {\"source_text\":\"...\",\"accepted_answers\":[\"...\"]}
+sp: {\"expected_phrase\":\"...\",\"pronunciation_tips\":\"...\"}
+ac: {\"scenario\":\"...\"}";
+    }
+
+    protected function buildWordsPrompt(array $p, string $lang, string $lvl, int $qty): string
+    {
+        $existing = $p['existing_words'] ?? '';
+
+        return "Gen {$qty} vocabulary words for {$lang} (CEFR {$lvl}).
+Existing words (sample): {$existing}
+
+Return ONLY JSON array:
+[{\"word\":\"...\",\"meaning\":\"...\",\"example_sentence\":\"...\"}]";
+    }
+
+    protected function callOpenAI(array $messages, int $maxTokens = 1000): array
     {
         $response = Http::withHeaders([
             'Authorization' => "Bearer {$this->apiKey}",
             'Content-Type' => 'application/json',
-        ])->timeout(30)->post("{$this->baseUrl}/chat/completions", [
+        ])->timeout(60)->post("{$this->baseUrl}/chat/completions", [
             'model' => $this->model,
             'messages' => $messages,
             'temperature' => 0.7,
-            'max_tokens' => 1000,
+            'max_tokens' => $maxTokens,
         ]);
 
         if (!$response->successful()) {
@@ -229,9 +315,20 @@ class AIService implements AIServiceInterface
 
     protected function parseJsonResponse(string $content): array
     {
-        $json = preg_match('/\{.*\}/s', $content, $matches) ? $matches[0] : '{}';
+        $decoded = json_decode($content, true);
+        if ($decoded !== null) {
+            return $decoded;
+        }
 
-        return json_decode($json, true) ?? [];
+        if (preg_match('/```(?:json)?\s*(\[.*\]|\{.*\})\s*```/s', $content, $matches)) {
+            return json_decode($matches[1], true) ?? [];
+        }
+
+        if (preg_match('/(\[.*\]|\{.*\})/s', $content, $matches)) {
+            return json_decode($matches[0], true) ?? [];
+        }
+
+        return [];
     }
 
     protected function generateTranslationFeedback(string $userAnswer, string $sourceText, array $acceptedAnswers): string

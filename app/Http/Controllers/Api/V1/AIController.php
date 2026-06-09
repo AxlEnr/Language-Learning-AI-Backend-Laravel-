@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AI\GenerateContentRequest;
 use App\Http\Requests\AI\GenerateExerciseRequest;
 use App\Http\Requests\AI\SendMessageRequest;
 use App\Http\Requests\AI\StartConversationRequest;
+use App\Jobs\GenerateContentJob;
 use App\Models\AIConversation;
+use App\Models\Lesson;
+use App\Models\Module;
+use App\Models\Word;
 use App\Services\AI\AIService;
 use App\Services\Adaptive\AdaptiveService;
 use Illuminate\Http\JsonResponse;
@@ -134,5 +139,86 @@ class AIController extends Controller
                 ],
             ],
         ]);
+    }
+
+    public function generateContent(GenerateContentRequest $request): JsonResponse
+    {
+        $user   = $request->user();
+        $type   = $request->type;
+        $langId = $request->language_id;
+
+        $language = \App\Models\Language::find($langId);
+        $levelCode = 'A1';
+
+        if ($request->filled('level_id')) {
+            $level = \App\Models\Level::find($request->level_id);
+            if ($level) {
+                $levelCode = $level->code;
+            }
+        } elseif ($user->level) {
+            $levelCode = $user->level->code;
+        }
+
+        $params = [
+            'type'          => $type,
+            'language_id'   => $langId,
+            'language_name' => $language?->name ?? 'Unknown',
+            'level_code'    => $levelCode,
+            'quantity'      => $request->quantity ?? 1,
+            'module_id'     => $request->module_id,
+            'lesson_type'   => $request->lesson_type,
+            'exercise_type' => $request->exercise_type,
+        ];
+
+        $params = array_merge($params, $this->buildCompactContext($request));
+
+        GenerateContentJob::dispatchSync($params);
+
+        $qty = $request->quantity ?? 1;
+        return response()->json([
+            'message'  => "AI generated {$qty} {$type}(s) for {$params['language_name']}",
+            'type'     => $type,
+            'quantity' => $request->quantity ?? 1,
+            'language' => $params['language_name'],
+        ]);
+    }
+
+    protected function buildCompactContext(GenerateContentRequest $request): array
+    {
+        $type = $request->type;
+        $context = [];
+
+        if (($type === 'lesson' || $type === 'exercise') && $request->module_id) {
+            $module = Module::with('lessons')->find($request->module_id);
+            if ($module) {
+                $context['module_title'] = $module->title;
+                $context['existing_lessons'] = $module->lessons
+                    ->map(fn ($l) => substr($l->type->value, 0, 1) . ':' . $l->title)
+                    ->implode(', ');
+            }
+        }
+
+        if ($type === 'exercise' && $request->lesson_id) {
+            $lesson = Lesson::with('exercises')->find($request->lesson_id);
+            if ($lesson) {
+                $context['lesson_title'] = $lesson->title;
+                $context['lesson_type_context'] = $lesson->type->value;
+                $context['existing_exercises'] = $lesson->exercises
+                    ->map(fn ($e) => substr($e->type->value, 0, 2) . ':' . mb_substr($e->prompt, 0, 30))
+                    ->implode(', ');
+            }
+        }
+
+        if ($type === 'words') {
+            $sample = Word::where('language_id', $request->language_id)
+                ->inRandomOrder()
+                ->limit(10)
+                ->get()
+                ->map(fn ($w) => $w->word . '(' . $w->meaning . ')')
+                ->implode(', ');
+            $context['existing_words'] = $sample;
+        }
+
+        return $context;
     }
 }

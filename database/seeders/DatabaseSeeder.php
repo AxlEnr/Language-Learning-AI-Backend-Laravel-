@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             EnglishVocabularySeeder::class,
             DemoContentSeeder::class,
             EnglishLessonsSeeder::class,
+            AdminUserSeeder::class,
             // UserWithStatsSeeder::class,
         ]);
     }

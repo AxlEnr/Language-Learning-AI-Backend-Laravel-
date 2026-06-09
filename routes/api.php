@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AdminController;
 use App\Http\Controllers\Api\V1\AIController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\LanguageController;
 use App\Http\Controllers\Api\V1\LessonController;
+use App\Http\Controllers\Api\V1\LevelController;
 use App\Http\Controllers\Api\V1\ModuleController;
 use App\Http\Controllers\Api\V1\ProgressController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -20,6 +22,7 @@ Route::prefix('/v1')->group(function (): void {
 
     Route::get('/languages', [LanguageController::class, 'index']);
     Route::get('/languages/{id}', [LanguageController::class, 'show']);
+    Route::get('/levels', [LevelController::class, 'index']);
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::prefix('auth')->group(function (): void {
@@ -51,6 +54,8 @@ Route::prefix('/v1')->group(function (): void {
             Route::get('/conversations/{conversationId}', [AIController::class, 'getConversation']);
             Route::post('/conversations/{conversationId}/messages', [AIController::class, 'sendMessage']);
             Route::post('/exercises/generate', [AIController::class, 'generateExercise']);
+            Route::post('/content/generate', [AIController::class, 'generateContent'])
+                ->middleware('admin');
             Route::get('/recommendations/lesson', [AIController::class, 'recommendLesson']);
         });
 
@@ -74,6 +79,16 @@ Route::prefix('/v1')->group(function (): void {
             Route::put('/profile', [UserController::class, 'updateProfile']);
             Route::get('/skills', [UserController::class, 'skills']);
             Route::get('/stats', [UserController::class, 'stats']);
+        });
+
+        Route::prefix('admin')->middleware('admin')->group(function (): void {
+            Route::get('/users', [AdminController::class, 'users']);
+            Route::get('/lessons', [AdminController::class, 'lessons']);
+            Route::delete('/lessons/{id}', [AdminController::class, 'destroyLesson']);
+            Route::get('/exercises', [AdminController::class, 'exercises']);
+            Route::delete('/exercises/{id}', [AdminController::class, 'destroyExercise']);
+            Route::get('/words', [AdminController::class, 'words']);
+            Route::delete('/words/{id}', [AdminController::class, 'destroyWord']);
         });
     });
 });
